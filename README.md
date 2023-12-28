@@ -1,5 +1,7 @@
 # Protein Classification Comparison
 
+## Objectives:
+The primary goal is to explore the feasibility of determining a protein's family type based on its sequence. While established tools like BLAST offer this capability, the study aims to investigate whether a machine learning approach can effectively classify a protein's family solely based on its sequence.
 
 This Python script leverages popular libraries such as pandas, numpy, matplotlib, seaborn, and scikit-learn to perform text classification. The code begins by importing essential modules and tools for data manipulation, visualization, and machine learning. Key functionalities include importing datasets using pandas from specified file paths and loading them into DataFrame objects (df_seq and df_char). The loaded datasets are expected to contain the necessary information for text classification tasks. The script then confirms the successful loading of datasets with a print statement. Users can extend the code to implement text preprocessing, feature extraction, and machine learning models for accurate text classification. Additionally, the script can be customized by updating the file paths in the dataset import statements to match the user's specific data location.
 
