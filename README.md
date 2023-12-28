@@ -1,96 +1,85 @@
-# protein_classification_comparison
+# Protein Classification Comparison
 
-## Dependencies:
-- numpy
-- pandas
-- matplotlib
-- textwrap
-- scikit-learn
-- IPython
-- scipy
+
+This Python script leverages popular libraries such as pandas, numpy, matplotlib, seaborn, and scikit-learn to perform text classification. The code begins by importing essential modules and tools for data manipulation, visualization, and machine learning. Key functionalities include importing datasets using pandas from specified file paths and loading them into DataFrame objects (df_seq and df_char). The loaded datasets are expected to contain the necessary information for text classification tasks. The script then confirms the successful loading of datasets with a print statement. Users can extend the code to implement text preprocessing, feature extraction, and machine learning models for accurate text classification. Additionally, the script can be customized by updating the file paths in the dataset import statements to match the user's specific data location.
 
 ```python
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib
-from textwrap import wrap
+import numpy as np
+from matplotlib import pyplot as plt
+import seaborn as sns
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn import svm
-from sklearn import tree
-from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix
-from IPython.display import Image, clear_output
-import scipy.sparse
-import math
-np.random.seed(7)
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-# Load sequence data for each protein
-all_seqs_df = pd.read_csv('../../') #path from the dataset
-# Load characteristic data for each protein
-all_charcs_df = pd.read_csv('../../') #path from the dataset
+
+# Import Datasets
+df_seq = pd.read_csv('../') #import from dataset
+df_char = pd.read_csv('../') #import from dataset
+
+print('Datasets have been loaded...')
 ```
 
-## Library Imports:
-
-- numpy, pandas, matplotlib: Fundamental libraries for data manipulation and visualization.
-- textwrap: Used for wrapping text for better display.
-- scikit-learn: Essential for machine learning tasks.
-- scipy: Used for sparse matrix handling.
-
-##Data Loading:
-
-- all_seqs_df: Loads protein sequence data from '../input/protein-data-set/pdb_data_seq.csv'.
-- all_charcs_df: Loads characteristic data from '../input/protein-data-set/pdb_data_no_dups.csv'.
-
-## Random Seed:
-
-- Sets a random seed to ensure reproducibility of results.
+Now we focuses on filtering the dataset to include only proteins, differentiating between character-level (protein_char) and sequence-level (protein_seq) data. The filtering is based on the 'macromoleculeType' column, ensuring only entries labeled as 'Protein' are retained. Subsequently, relevant variables are selected to create refined DataFrames (protein_char and protein_seq) containing essential information for further analysis. Specifically, 'structureId' and 'classification' are retained in protein_char, while 'structureId' and 'sequence' are retained in protein_seq. 
 
 ```python
-protein_charcs = all_charcs_df[all_charcs_df.macromoleculeType == 'Protein'].reset_index(drop=True)
-protein_seqs = all_seqs_df[all_seqs_df.macromoleculeType == 'Protein'].reset_index(drop=True)
+# Filter for only proteins
+protein_char = df_char[df_char.macromoleculeType == 'Protein']
+protein_seq = df_seq[df_seq.macromoleculeType == 'Protein']
 
-print(protein_charcs.head())
-# print(protein_seqs.head())
-# protein_df.isna().sum()
-# protein_df.columns
+# Select only necessary variables to join
+protein_char = protein_char[['structureId','classification']]
+protein_seq = protein_seq[['structureId','sequence']]
+protein_seq.head()
 ```
 
+![image](https://github.com/IDrDomino/protein_classification_comparison/assets/154571800/f4e90fec-1982-4c17-92bd-e1008725b221)
 
-![image](https://github.com/IDrDomino/protein_classification_comparison/assets/154571800/6ec14556-0f67-4532-b7ac-890b07aff054)
-
-Now we focuses on combining protein characteristics and sequence data. The code snippet provided performs several essential data manipulations, including filtering columns, merging dataframes, handling missing values, and filtering out proteins with an unknown function.
-
+```python 
+protein_char.head()
+```
+![image](https://github.com/IDrDomino/protein_classification_comparison/assets/154571800/33928a23-9bcd-487b-a458-e764f9929518)
 
 ```python
-protein_charcs = protein_charcs[['structureId','classification', 'residueCount', 'structureMolecularWeight',\
-                         'crystallizationTempK', 'densityMatthews', 'densityPercentSol','phValue']]
-protein_seqs = protein_seqs[['structureId','sequence']]
-
-# combine protein characteristics df with their sequences using structureId
-protein_all = protein_charcs.set_index('structureId').join(protein_seqs.set_index('structureId'))
-protein_all = protein_all.dropna()
-
-# capitalize all classification values to avoid missing any values in the next step
-protein_all.classification = protein_all.classification.str.upper()
-
-# drop all proteins with an unknown function; note -- the tilde returns the inverse of a filter
-protein_all = protein_all[~protein_all.classification.str.contains("UNKNOWN FUNCTION")]
-
-print(protein_all.head())
+# Join two datasets on structureId
+model_f = protein_char.set_index('structureId').join(protein_seq.set_index('structureId'))
+model_f.head()
 ```
 
-![image](https://github.com/IDrDomino/protein_classification_comparison/assets/154571800/ce46072b-9f62-4a5c-b772-38eb24cd91ae)
+![image](https://github.com/IDrDomino/protein_classification_comparison/assets/154571800/489f0ebc-77e6-4cde-8db3-ec85d49300c3)
 
 ```python
-class_count = protein_all.classification.value_counts()
-functions = np.asarray(class_count[(class_count > 800)].index)
-data = protein_all[protein_all.classification.isin(functions)]
-data = data.drop_duplicates(subset=["classification","sequence"])  # leaving more rows results in duplciates / index related?
-data.head()
+print('%d is the number of rows in the joined dataset' %model_f.shape[0])
 ```
+- 346325 is the number of rows in the joined dataset
+
+The two dataframes have officially been joined into one with 346,325 proteins. The data processing is not finished as it's important to take a look at the misingness associated with the columns.
+
+```python
+# Check NA counts
+model_f.isnull().sum()
+```
+```
+classification    1
+sequence          3
+dtype: int64
+```
+
+- With 346,325 proteins, it appears that simply removing missing values is acceptable.
+
+```python
+# Drop rows with missing values
+model_f = model_f.dropna()
+print('%d is the number of proteins that have a classification and sequence' %model_f.shape[0])
+```
+
+- 346321 is the number of proteins that have a classification and sequence
+
+Finally, it is crucial to examine the various categories of family groups that can exist.
+
+
+
+
+
+
 
